@@ -8,16 +8,19 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TimePicker;
 import android.widget.Toast;
+import java.util.Calendar;
 
 public class MainActivity extends AppCompatActivity {
 
     Button registration_btn;
     ListView alarm_list;
+    BreakAlarmApplication app;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        app = (BreakAlarmApplication) getApplicationContext();
 
         initUiComponents();
 
@@ -35,7 +38,11 @@ public class MainActivity extends AppCompatActivity {
         TimePickerDialog.OnTimeSetListener mTimeSetListener = new TimePickerDialog.OnTimeSetListener() {
             @Override
             public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
-                Toast.makeText(getApplicationContext(), "Time is="+ hourOfDay + ":" + minute,Toast.LENGTH_SHORT).show();
+                // Calendar 객체를 생성하여, UI에서 설정한 시간과 분으로 설정하여 전역 자료 구조에 저장한다.
+                Calendar cal = Calendar.getInstance();
+                cal.add(Calendar.HOUR, hourOfDay);
+                cal.add(Calendar.MINUTE, minute);
+                app.setAlarm(cal);
             }
         };
 
