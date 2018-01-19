@@ -3,8 +3,6 @@ package com.example.jhw_n_491.break_alarm;
 import android.app.Activity;
 import android.app.Application;
 import android.content.SharedPreferences;
-import android.util.Log;
-
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -12,10 +10,13 @@ import java.util.Calendar;
 import java.util.ArrayList;
 
 public class BreakAlarmApplication extends Application{
+
     private ArrayList<Calendar> alarm_list;
     private SharedPreferences sp;
     private static final String SP_NAME = "Break_Alarm";
     private static final SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+    AlarmRegistration exist_alarm;
+    private int alarm_count = 0;
 
     public void init()
     {
@@ -33,11 +34,16 @@ public class BreakAlarmApplication extends Application{
 
             for (String s : str_val_list) {
                 Calendar cal = Calendar.getInstance();
+                exist_alarm = new AlarmRegistration(getApplicationContext(), cal);
                 try {
                     cal.setTime(sdf.parse(s));
                 } catch (ParseException e) {
                     e.printStackTrace();
                 }
+                alarm_count++;
+                String Sample[] = s.split(":");
+                exist_alarm.Exist_AlarmList(Integer.parseInt(Sample[0]),Integer.parseInt(Sample[1]),alarm_count);
+
                 alarm_list.add(cal);
             }
         }
@@ -98,6 +104,7 @@ public class BreakAlarmApplication extends Application{
                 editor.commit();
             }
         }
+        alarm_count--;
         updateAlarmList();
     }
 
@@ -105,4 +112,6 @@ public class BreakAlarmApplication extends Application{
     {
         alarm_list.clear();
     }
+
+
 }
