@@ -1,19 +1,19 @@
 package com.example.jhw_n_491.break_alarm;
 
-import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.TimePickerDialog;
-import android.content.SharedPreferences;
+import android.content.DialogInterface;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TimePicker;
-import android.widget.Toast;
-
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 
 public class MainActivity extends AppCompatActivity {
@@ -21,18 +21,29 @@ public class MainActivity extends AppCompatActivity {
     Button registration_btn;
     ListView alarm_list;
     BreakAlarmApplication app;
-    private SharedPreferences sp;
-    private static final String SP_NAME = "Break_Alarm";
+    private static final SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+    private ArrayList<String> alarm_list_strings;
+    private ArrayAdapter<String> adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         app = (BreakAlarmApplication) getApplicationContext();
-        sp = getSharedPreferences("Break_Alarm", Activity.MODE_PRIVATE);
+        app.init();
 
-        getAlarmList();
         initUiComponents();
+
+        // ListView에 출력 하기 위해 알람 목록을 문자열 리스트로 가져옵니다.
+        alarm_list_strings = new ArrayList<String>();
+        for (Calendar c: app.getAlarmList()) {
+            alarm_list_strings.add(sdf.format(c.getTime()));
+        }
+
+        // ListView에 알람 목록을 표시합니다.
+        adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1,
+                                             alarm_list_strings);
+        alarm_list.setAdapter(adapter);
 
         registration_btn.setOnClickListener(new View.OnClickListener()
         {
@@ -41,42 +52,35 @@ public class MainActivity extends AppCompatActivity {
                 DialogTimePicker();
             }
         });
-    }
 
-    private void getAlarmList() {
-        String str_val = sp.getString("Alarm_List", null);
-        String[] str_val_list = str_val.split("/");
-        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+        alarm_list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                final String selected_item = (String)parent.getItemAtPosition(position);
+                Log.d("BreakAlarm", "ListView:" + selected_item);
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
 
-        Log.d("BreakAlarm", "getAlarmList:" + str_val);
-
-        for (String s: str_val_list) {
-            Calendar cal = Calendar.getInstance();
-            Log.d("BreakAlarm", "for:" + s);
-            try {
-                cal.setTime(sdf.parse(s));
-            } catch (ParseException e) {
-                e.printStackTrace();
+                builder.setTitle("알람 삭제");
+                builder.setMessage("[" + selected_item + "] 알람을 삭제하시겠습니까?");
+                builder.setPositiveButton("삭제",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                // 알람 목록에서 선택된 알람을 삭제합니다.
+                                app.removeAlarm(selected_item);
+                                alarm_list_strings.remove(selected_item);
+                                adapter.notifyDataSetChanged();
+                                dialog.dismiss();
+                            }
+                        });
+                builder.setNegativeButton("취소",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                            }
+                        });
+                builder.show();
             }
-            app.setAlarm(cal);
-        }
-    }
-
-    private void updateAlarmList()
-    {
-        SharedPreferences.Editor editor = sp.edit();
-        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-        String saved_str = "";
-
-        for (Calendar cal : app.getAlarmList()) {
-            saved_str += sdf.format(cal.getTime());
-            saved_str += "/";
-            Log.d("BreakAlarm", "puAlarmList for: " + saved_str);
-        }
-
-        editor.putString("Alarm_List", saved_str);
-        Log.d("BreakAlarm", "puAlarmList: " + saved_str);
-        editor.apply();
+        });
     }
 
     private void DialogTimePicker()
@@ -86,12 +90,14 @@ public class MainActivity extends AppCompatActivity {
             public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
                 // Calendar 객체를 생성하여, UI에서 설정한 시간과 분으로 설정하여 전역 자료 구조에 저장한다.
                 Calendar cal = Calendar.getInstance();
-                cal.add(Calendar.HOUR, hourOfDay);
-                cal.add(Calendar.MINUTE, minute);
-                cal.add(Calendar.SECOND, 0);
+                cal.set(Calendar.HOUR, hourOfDay);
+                cal.set(Calendar.MINUTE, minute);
+                cal.set(Calendar.SECOND, 0);
 
+                // 설정한 알람 시간을 저장합니다.
                 app.setAlarm(cal);
-                updateAlarmList();
+                alarm_list_strings.add(sdf.format(cal.getTime()));
+                adapter.notifyDataSetChanged();
             }
         };
 
@@ -103,5 +109,12 @@ public class MainActivity extends AppCompatActivity {
     {
         registration_btn = (Button)findViewById(R.id.registration_btn);
         alarm_list = (ListView)findViewById(R.id.alarm_list);
+    }
+
+    public void onBackPressed()
+    {
+        // 뒤로 가기를 눌렀을때 알람 목록 데이타를 회수 합니다.
+        app.clear();
+        super.onBackPressed();
     }
 }
